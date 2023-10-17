@@ -17,40 +17,56 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val TAG = "MainActivity"
-        private const val PERMISSION_REQUEST_CODE = 1
+        private const val REQUEST_PERMISSION_FOR_ALL_DEVICES = 1
+        private const val REQUEST_PERMISSION_FOR_BLE_DEVICES = 2
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        findViewById<View>(R.id.btnConnect).setOnClickListener {
+        findViewById<View>(R.id.btnSearchAllDevices).setOnClickListener {
             onClickConnect()
         }
+
+        findViewById<View>(R.id.btnSearchBleDevices).setOnClickListener {
+            onClickSearchBleDevices()
+        }
+
+        /*
+        * BluetoothLeScanner
+Provided by the BluetoothAdapter class, this class allows us to start a BLE scan.
+
+Note: ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION is required for BLE scans starting from Android M (6.0) and above, whereas ACCESS_FINE_LOCATION is required for Android 10 and above.
+        * */
+    }
+
+    private fun onClickSearchBleDevices(){
+        requestBluetoothPermissions(REQUEST_PERMISSION_FOR_BLE_DEVICES)
     }
 
     private fun onClickConnect() {
-        requestBluetoothPermissions()
+        requestBluetoothPermissions(REQUEST_PERMISSION_FOR_ALL_DEVICES)
     }
 
-    private fun requestBluetoothPermissions() {
+    private fun requestBluetoothPermissions(requestCode: Int) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
                 requestPermissions(
                     arrayOf(
                         Manifest.permission.BLUETOOTH_SCAN,
                         Manifest.permission.BLUETOOTH_CONNECT
-                    ), PERMISSION_REQUEST_CODE
+                    ), requestCode
                 )
             else
                 requestPermissions(
                     arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                    PERMISSION_REQUEST_CODE
+                    requestCode
                 )
         } else {
             requestPermissions(
                 arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION),
-                PERMISSION_REQUEST_CODE
+                requestCode
             )
         }
     }
@@ -61,7 +77,7 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == PERMISSION_REQUEST_CODE) {
+        if (requestCode == REQUEST_PERMISSION_FOR_ALL_DEVICES || requestCode == REQUEST_PERMISSION_FOR_BLE_DEVICES) {
             for (index in 0..grantResults.lastIndex) {
                 if (grantResults[index] == PackageManager.PERMISSION_DENIED) {
                     Log.w(TAG, "No sufficient permissions")
@@ -70,7 +86,12 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             Log.d(TAG, "Needed permissions are granted")
-            startActivity(Intent(this, DevicesListActivity::class.java))
+            val intent = if (requestCode == REQUEST_PERMISSION_FOR_ALL_DEVICES)
+                Intent(this, DevicesListActivity::class.java)
+            else
+                Intent(this, DevicesBleListActivity::class.java)
+
+            startActivity(intent)
             return
         }
     }

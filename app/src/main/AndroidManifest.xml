@@ -51,6 +51,7 @@
             </intent-filter>
         </activity>
         <activity android:name=".DevicesListActivity" />
+        <activity android:name=".DevicesBleListActivity"/>
 
     </application>
 

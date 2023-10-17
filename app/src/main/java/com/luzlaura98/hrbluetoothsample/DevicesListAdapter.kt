@@ -3,6 +3,7 @@ package com.luzlaura98.hrbluetoothsample
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
 import android.os.Build
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -40,6 +41,11 @@ class DevicesListAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
                 "${item.name} / alias = ${item.alias} \ntype = ${item.typeName} / address = ${item.address}"
             else
                 "${item.name}\ntype = ${item.typeName} / address = ${item.address}"
+
+
+            textView.setOnClickListener {
+                Log.i("AAA",item.uuids.size.toString())
+            }
         }
 
         val BluetoothDevice.typeName: String?

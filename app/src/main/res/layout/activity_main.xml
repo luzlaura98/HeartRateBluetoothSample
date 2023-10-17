@@ -1,15 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical">
+    android:orientation="vertical"
+    android:weightSum="1">
+
+    <Space
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="0.4" />
 
     <Button
-        android:id="@+id/btnConnect"
+        android:id="@+id/btnSearchAllDevices"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="center"
         android:layout_marginHorizontal="20dp"
-        android:text="Connect" />
+        android:text="Search all devices" />
 
-</FrameLayout>
+    <Button
+        android:id="@+id/btnSearchBleDevices"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:layout_marginHorizontal="20dp"
+        android:text="Search ble devices only" />
+
+</LinearLayout>
