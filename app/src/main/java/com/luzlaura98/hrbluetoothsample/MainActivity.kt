@@ -19,6 +19,7 @@ class MainActivity : AppCompatActivity() {
         private const val TAG = "MainActivity"
         private const val REQUEST_PERMISSION_FOR_ALL_DEVICES = 1
         private const val REQUEST_PERMISSION_FOR_BLE_DEVICES = 2
+        private const val REQUEST_PERMISSION_PAIRED_DEVICES = 3
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -33,6 +34,10 @@ class MainActivity : AppCompatActivity() {
             onClickSearchBleDevices()
         }
 
+        findViewById<View>(R.id.btnPairedDevices).setOnClickListener {
+            onClickPairedDevices()
+        }
+
         /*
         * BluetoothLeScanner
 Provided by the BluetoothAdapter class, this class allows us to start a BLE scan.
@@ -43,6 +48,10 @@ Note: ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION is required for BLE scans s
 
     private fun onClickSearchBleDevices(){
         requestBluetoothPermissions(REQUEST_PERMISSION_FOR_BLE_DEVICES)
+    }
+
+    private fun onClickPairedDevices(){
+        requestBluetoothPermissions(REQUEST_PERMISSION_PAIRED_DEVICES)
     }
 
     private fun onClickConnect() {
@@ -77,7 +86,10 @@ Note: ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION is required for BLE scans s
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == REQUEST_PERMISSION_FOR_ALL_DEVICES || requestCode == REQUEST_PERMISSION_FOR_BLE_DEVICES) {
+        if (requestCode == REQUEST_PERMISSION_FOR_ALL_DEVICES ||
+            requestCode == REQUEST_PERMISSION_FOR_BLE_DEVICES ||
+            requestCode == REQUEST_PERMISSION_PAIRED_DEVICES) {
+
             for (index in 0..grantResults.lastIndex) {
                 if (grantResults[index] == PackageManager.PERMISSION_DENIED) {
                     Log.w(TAG, "No sufficient permissions")
@@ -88,8 +100,10 @@ Note: ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION is required for BLE scans s
             Log.d(TAG, "Needed permissions are granted")
             val intent = if (requestCode == REQUEST_PERMISSION_FOR_ALL_DEVICES)
                 Intent(this, DevicesListActivity::class.java)
-            else
+            else if (requestCode == REQUEST_PERMISSION_FOR_BLE_DEVICES)
                 Intent(this, DevicesBleListActivity::class.java)
+            else
+                Intent(this, DevicesAlreadyPairedListActivity::class.java)
 
             startActivity(intent)
             return

@@ -25,7 +25,7 @@ class DevicesListActivity : AppCompatActivity() {
         private const val TAG = "DevicesListActivity"
     }
 
-    private val recyclerAdapter by lazy { DevicesListAdapter() }
+    private val recyclerAdapter by lazy { DevicesListAdapter{bluetoothDevice ->  }}
 
     private val bluetoothAdapter by lazy {
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager

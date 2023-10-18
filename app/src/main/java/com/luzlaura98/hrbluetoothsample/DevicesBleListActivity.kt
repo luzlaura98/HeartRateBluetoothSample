@@ -2,50 +2,113 @@ package com.luzlaura98.hrbluetoothsample
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothGatt
+import android.bluetooth.BluetoothGattCallback
+import android.bluetooth.BluetoothGattCharacteristic
 import android.bluetooth.BluetoothManager
+import android.bluetooth.BluetoothProfile
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.Bundle
-import android.os.ParcelUuid
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.RecyclerView
-import java.util.UUID
 
 
 /**
  * Created by Luz on 17/10/2023.
  */
-
-/*
-* public static class Characteristic {
-    final static public UUID HEART_RATE_MEASUREMENT   = UUID.fromString("00002a37-0000-1000-8000-00805f9b34fb");
-    final static public UUID CSC_MEASUREMENT          = UUID.fromString("00002a5b-0000-1000-8000-00805f9b34fb");
-    final static public UUID MANUFACTURER_STRING      = UUID.fromString("00002a29-0000-1000-8000-00805f9b34fb");
-    final static public UUID MODEL_NUMBER_STRING      = UUID.fromString("00002a24-0000-1000-8000-00805f9b34fb");
-    final static public UUID FIRMWARE_REVISION_STRING = UUID.fromString("00002a26-0000-1000-8000-00805f9b34fb");
-    final static public UUID APPEARANCE               = UUID.fromString("00002a01-0000-1000-8000-00805f9b34fb");
-    final static public UUID BODY_SENSOR_LOCATION     = UUID.fromString("00002a38-0000-1000-8000-00805f9b34fb");
-    final static public UUID BATTERY_LEVEL            = UUID.fromString("00002a19-0000-1000-8000-00805f9b34fb");
-    final static public UUID CLIENT_CHARACTERISTIC_CONFIG = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
-}
-* */
 class DevicesBleListActivity : AppCompatActivity() {
     companion object {
         private const val TAG = "DevicesBleListActivity"
-        private const val HEART_RATE_MEASUREMENT_UUID = "00002a37-0000-1000-8000-00805f9b34fb"
+        private const val REQUEST_CONNECT_DEVICE = 7
     }
 
-    private val recyclerAdapter by lazy { DevicesListAdapter() }
+    private var device: BluetoothDevice? = null
+    private val recyclerAdapter by lazy {
+        DevicesListAdapter {
+            startActivity(HeartRateActivity.buildIntent(this, it))
+        }
+    }
 
     private val bluetoothAdapter by lazy {
         val bluetoothManager = getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
         bluetoothManager.adapter
+    }
+
+    private val scanner: BluetoothLeScanner by lazy {
+        bluetoothAdapter.bluetoothLeScanner
+    }
+
+    // scanCallback /////
+    private val scanCallback: ScanCallback = object : ScanCallback() {
+        @SuppressLint("MissingPermission")
+        override fun onScanResult(callbackType: Int, result: ScanResult) {
+            val device: BluetoothDevice = result.device
+            Log.i(
+                TAG,
+                "onScanResult. callType=$callbackType, device=${device.name}, uuids=${device.uuids}"
+            )
+            if (device.type == BluetoothDevice.DEVICE_TYPE_LE || device.type == BluetoothDevice.DEVICE_TYPE_DUAL)
+            recyclerAdapter.addDevice(device)
+        }
+
+        override fun onBatchScanResults(results: List<ScanResult?>?) {
+            Log.e(TAG, "onBatchScanResults. size=${results?.size}")
+        }
+
+        override fun onScanFailed(errorCode: Int) {
+            Log.e(TAG, "onScanFailed=$errorCode")
+        }
+    }
+
+    private var gatt: BluetoothGatt? = null
+    private val gattCallback = object : BluetoothGattCallback() {
+        @SuppressLint("MissingPermission")
+        override fun onConnectionStateChange(gatt: BluetoothGatt?, status: Int, newState: Int) {
+            super.onConnectionStateChange(gatt, status, newState)
+            if (status != BluetoothGatt.GATT_SUCCESS)
+                Log.e(TAG, "gatt status=$status")
+
+            Log.i(TAG, "onConnectionStateChange status = $status, new state= $newState") // need internet traffic
+            if (newState == BluetoothProfile.STATE_CONNECTED){
+                gatt?.discoverServices()
+            }
+        }
+
+        override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
+            super.onServicesDiscovered(gatt, status)
+            // all services discovered
+            Log.i(TAG, "onServicesDiscovered")
+            val services = gatt?.services?:return
+            val heartRateUUID = AppUUIDs.HR_MEASUREMENT_UUID
+            for (s in services){
+                if (s.getCharacteristic(heartRateUUID) != null){
+                    if (device != null)
+                        startActivity(HeartRateActivity.buildIntent(this@DevicesBleListActivity, device!!))
+                    return
+                }
+            }
+            Log.e(TAG, "Heart Rate not available for this device")
+            Toast.makeText(this@DevicesBleListActivity, "Heart Rate not available for this device", Toast.LENGTH_SHORT).show()
+        }
+
+        override fun onCharacteristicRead(
+            gatt: BluetoothGatt,
+            characteristic: BluetoothGattCharacteristic,
+            value: ByteArray,
+            status: Int
+        ) {
+            super.onCharacteristicRead(gatt, characteristic, value, status)
+            Log.i(TAG, "onCharacteristicRead=$characteristic")
+            //gatt.disconnect() ??
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -65,62 +128,42 @@ class DevicesBleListActivity : AppCompatActivity() {
             return
         }
 
-        val scanner: BluetoothLeScanner = bluetoothAdapter.bluetoothLeScanner
-
-        // scanCallback /////
-        val scanCallback: ScanCallback = object : ScanCallback() {
-            override fun onScanResult(callbackType: Int, result: ScanResult) {
-                val device: BluetoothDevice = result.device
-                // ...do whatever you want with this found device
-                Log.i(TAG,"onScanResult. callType=$callbackType, device=${device.name}, uuids=${device.uuids}" )
-                recyclerAdapter.addDevice(device)
-            }
-
-            override fun onBatchScanResults(results: List<ScanResult?>?) {
-                Log.e(TAG, "onBatchScanResults. size=${results?.size}")
-                // Ignore for now
-            }
-
-            override fun onScanFailed(errorCode: Int) {
-                Log.e(TAG, "onScanFailed=$errorCode")
-                // Ignore for now
-            }
-        }
-
-        // filters /////
-        val serviceUUID = UUID.fromString(HEART_RATE_MEASUREMENT_UUID) // 0x2A37
-        val serviceUUIDs = arrayOf(serviceUUID)
-        var filters: MutableList<ScanFilter?>? = null
-        filters = ArrayList()
-        /*for (serviceUUID in serviceUUIDs) {
-            val filter = ScanFilter.Builder()
-                .setServiceUuid(ParcelUuid(serviceUUID))
-                .build()
-            filters.add(filter)
-        }*/
-
-        // scanSettings /////
-        val scanSettings = ScanSettings.Builder()
-            .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER)
-            .setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
-            .setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
-            .setNumOfMatches(ScanSettings.MATCH_NUM_ONE_ADVERTISEMENT)
-            .setReportDelay(0L)
-            .build()
-
-        if (scanner != null) {
-            scanner.startScan(filters, scanSettings, scanCallback)
-            Log.d(TAG, "scan started")
-        } else {
-            Log.e(TAG, "could not get scanner object")
-        }
 
         setupRecyclerView()
+        scan()
     }
 
-    private fun setupRecyclerView(){
+    @SuppressLint("MissingPermission")
+    private fun scan() {
+
+        val scanSettings = ScanSettings.Builder()
+            .setScanMode(ScanSettings.SCAN_MODE_LOW_POWER) //SCAN_MODE_LOW_POWER // SCAN_MODE_LOW_LATENCY
+            //.setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
+            //.setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
+            //.setNumOfMatches(ScanSettings.MATCH_NUM_ONE_ADVERTISEMENT)
+            //.setReportDelay(0L)
+            .build()
+
+        scanner.startScan(emptyList(), scanSettings, scanCallback)
+        Log.d(TAG, "scan started")
+    }
+
+    private fun setupRecyclerView() {
         findViewById<RecyclerView>(R.id.recyclerView).apply {
             adapter = recyclerAdapter
+        }
+    }
+
+    // connection
+    @SuppressLint("MissingPermission")
+    private fun connectToDevice(bluetoothDevice: BluetoothDevice){
+        if (gatt == null){
+            device = bluetoothDevice
+            scanner.stopScan(scanCallback)
+            Handler(Looper.getMainLooper())
+                .postDelayed({
+                    gatt = bluetoothDevice.connectGatt(this,false, gattCallback)
+                }, 3000)
         }
     }
 }

@@ -13,12 +13,13 @@ import androidx.recyclerview.widget.RecyclerView
 /**
  * Created by Luz on 17/10/2023.
  */
-class DevicesListAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+class DevicesListAdapter(private val onSelectDevice: (BluetoothDevice) -> Unit) :
+    RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
     private val items = ArrayList<BluetoothDevice>()
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.item_device, parent, false)
-        return DeviceViewHolder(view)
+        return DeviceViewHolder(view, onSelectDevice)
     }
 
     override fun getItemCount() = items.size
@@ -28,11 +29,13 @@ class DevicesListAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     }
 
     fun addDevice(item: BluetoothDevice) {
+        if (items.any() { it.address == item.address })
+            return
         items.add(item)
         notifyItemInserted(items.lastIndex)
     }
 
-    private class DeviceViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+    private class DeviceViewHolder(itemView: View, private val onSelectDevice: (BluetoothDevice) -> Unit) : RecyclerView.ViewHolder(itemView) {
         val textView = itemView as TextView
 
         @SuppressLint("MissingPermission")
@@ -44,7 +47,8 @@ class DevicesListAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
 
 
             textView.setOnClickListener {
-                Log.i("AAA",item.uuids.size.toString())
+                Log.i("AAA", item.uuids?.size.toString())
+                onSelectDevice.invoke(item)
             }
         }
 
